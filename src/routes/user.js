@@ -2,17 +2,19 @@
 const express = require('express');
 const router = express.Router();
 const user = require('../controllers/user');
+const upload = require('../Middlewares/userMulter');
+const validations = require('../Middlewares/userValidation');
 
 // --> Rutas <--
 
 //Todos los usuarios
-router.get('/all' ,user.allUsers);
+router.get('/all', upload.single('avatar') ,user.allUsers);
 
 //Usuario por ID
 //router.get('/user/:id', user.userById);
 
 //Crear usuario
-//router.post('/create', user.createUser);
+router.post('/create', validations, user.createUser);
 
 //Editar usuario
 //router.put('/user/:id', user.editUser);
@@ -21,7 +23,7 @@ router.get('/all' ,user.allUsers);
 //router.delete('/user/:id', user.deleteUser);
 
 //Login
-//router.get('/login', user.login);
+router.post('/login', user.login);
 
 //Logout
 //router.get('/logout', user.logout);
