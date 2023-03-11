@@ -9,19 +9,21 @@ const user = require('../controllers/user');
 router.get('/all' ,user.allUsers);
 
 //Usuario por ID
-router.get('/user/:id', user.userById);
+//router.get('/user/:id', user.userById);
 
 //Crear usuario
-router.post('/create', user.createUser);
+//router.post('/create', user.createUser);
 
 //Editar usuario
-router.put('/user/:id', user.editUser);
+//router.put('/user/:id', user.editUser);
 
 //Eliminar usuario
-router.delete('/user/:id', user.deleteUser);
+//router.delete('/user/:id', user.deleteUser);
 
 //Login
-router.get('/login', user.login);
+//router.get('/login', user.login);
 
 //Logout
-router.get('/logout', user.logout);
+//router.get('/logout', user.logout);
+
+module.exports = router;

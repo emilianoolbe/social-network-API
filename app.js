@@ -27,8 +27,8 @@ app.use(express.urlencoded({extended: true}));
 
 // --> Rutas <--
 app.use('/api/users', user);
-app.use('/api/publication', follow);
-app.use('/api/follow', publication);
+app.use('/api/publication', publication);
+app.use('/api/follow', follow);
 
 // --> Escucha del servidor <--
 app.listen(puerto, () => {

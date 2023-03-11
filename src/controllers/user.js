@@ -5,7 +5,10 @@ const User = require('../database/models/User');
 
 //Todos los usuarios
 const allUsers = (req, res) => {
-
+    res.status(200).json({
+        status: 'Success',
+        message: 'Controlador user'
+    });
 };
 
 //Usuario por ID
