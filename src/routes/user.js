@@ -9,7 +9,7 @@ const auth = require('../middlewares/auth');
 // --> Rutas <--
 
 //Todos los usuarios
-router.get('/all', auth, user.allUsers);
+router.get('/all/:page?', auth, user.allUsers);
 
 //Usuario por ID
 //router.get('/user/:id', user.userById);
@@ -27,7 +27,7 @@ router.post('/create', validations, user.createUser);
 router.post('/login', user.login);
 
 //Perfil
-router.get('/profile/:id', user.profile);
+router.get('/profile/:id', auth, user.profile);
 
 //Logout
 //router.get('/logout', user.logout);

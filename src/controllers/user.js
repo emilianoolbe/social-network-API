@@ -1,18 +1,46 @@
-// --> Modelo + validaciones + bcrypt + JWT <--
+// --> Modelo + validaciones + bcrypt + JWT + mongoose-pagination <--
 const User = require('../database/models/User');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 const jwt = require('../services/jwt');
+const mongoosePagination = require('mongoose-pagination');
 
 // --> Métodos <--
 
-//Todos los usuarios
-const allUsers = (req, res) => {
-    res.status(200).json({
-        status: 'Success',
-        message: 'Controlador user',
-        user: req.user
-    });
+//Todos los usuarios - dividos por pág.
+const allUsers = async (req, res) => {
+  
+    //Primero verifico que página se ingresó
+    let page = 1;
+
+    if (req.params.page) {
+        page = req.params.page;
+    };
+
+    //Convierto el string que llega a n°
+    page = parseInt(page)
+
+    //Consulta con mongoose paginate
+    let userPerPage = 5
+    try {
+        const USERS = await User.find().sort('_id')
+        const PAGINATION = await User.find().sort('_id').paginate(page, userPerPage)
+          
+        return res.status(200).json({
+            status: 'Success',
+            Page: page,
+            TotalUsers: USERS.length,
+            TotalPerPage: userPerPage,
+            Pages: Math.ceil(USERS.length / userPerPage) ,
+            Users: PAGINATION
+        });
+
+    } catch (error) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Usuarios no disponibles'
+        });
+    };
 };
 
 //Usuario por ID
