@@ -1,6 +1,6 @@
 // --> Modelo + validaciones<--
 const User = require('../database/models/User');
-const {validationResult} = require('express-validator');
+const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 // --> Métodos <--
 
@@ -39,7 +39,7 @@ const createUser = async (req, res) => {
         // --> No hay datos ingresados duplicados <--
 
         //Cifrado de datos sensibles
-        let pwd= await bcrypt.hash(req.body.password, 10);
+        let pwd = await bcrypt.hash(req.body.password, 10);
         req.body.password = pwd;
 
         //Creo objeto a guardar
