@@ -1,14 +1,17 @@
-// --> Modelo + validaciones<--
+// --> Modelo + validaciones + bcrypt + JWT <--
 const User = require('../database/models/User');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
+const jwt = require('../services/jwt');
+
 // --> Métodos <--
 
 //Todos los usuarios
 const allUsers = (req, res) => {
     res.status(200).json({
         status: 'Success',
-        message: 'Controlador user'
+        message: 'Controlador user',
+        user: req.user
     });
 };
 
@@ -36,6 +39,7 @@ const createUser = async (req, res) => {
                 message:'Este email o nick ya estan registrados'
             });
         };
+
         // --> No hay datos ingresados duplicados <--
 
         //Cifrado de datos sensibles
@@ -43,11 +47,11 @@ const createUser = async (req, res) => {
         req.body.password = pwd;
 
         //Creo objeto a guardar
-        const userToSave = new User(req.body)
+        const USERTOSAVE = new User(req.body)
     
         //Guardar usuario en DB - retorno de resultados
-        let userStored = await userToSave.save();
-        userToSave.save()
+        let userStored = await USERTOSAVE.save();
+        USERTOSAVE.save()
             .then((userStored) => {
                 return res.status(200).json({
                     status: 'Success',
@@ -62,11 +66,13 @@ const createUser = async (req, res) => {
             });         
     
     }else{
+
         //Muestro errores de validación
         return res.status(400).json({
             status: 'Se han encontrado errores en la validación de los datos ingresados',
             message: errors.mapped()
         });
+
     };
     
 
@@ -92,15 +98,15 @@ const login = async (req, res) => {
     if (errors.isEmpty()) {
         
         //Valido si existe el usuario
-        const userToLogin = await User.findOne({email: req.body.email})
-        if (!userToLogin) {
+        const USERTOLOGIN = await User.findOne({email: req.body.email})
+        if (!USERTOLOGIN) {
             return res.status(400).json({
                 status: 'Error',
                 message: 'El email que ha ingresado no existe, debe registrarse primero para poder loguearse'
             });
         };
         //Valido contraseña de usuario
-        const pwd = bcrypt.compareSync(req.body.password, userToLogin.password)
+        let pwd = bcrypt.compareSync(req.body.password, USERTOLOGIN.password)
         if (!pwd){
             return res.status(400).json({
                 status: 'Error',
@@ -109,16 +115,18 @@ const login = async (req, res) => {
         };
 
         //Conseguir Token
+        const TOKEN = jwt.createToken(USERTOLOGIN);
     
         //Devolver resultados
         return res.status(200).json({
             status: 'Success',
             message: 'Usuario logueado correctamente',
             user: {
-                id: userToLogin._id,
-                name: userToLogin.name,
-                nick: userToLogin.nick,     
-            }
+                id: USERTOLOGIN._id,
+                name: USERTOLOGIN.name,
+                nick: USERTOLOGIN.nick,     
+            },
+            TOKEN
         });
 
     }else{
@@ -129,10 +137,42 @@ const login = async (req, res) => {
     };
 };
 
+//Perfil
+const profile = async (req, res) => {
+
+    //Consultar a la DB datos de usuarios por ID
+    try {
+        const USER = await User.findById(req.params.id)
+        return res.status(200).json({
+            status: 'Success',
+            message: 'Usuario logueado',
+            user: {
+                id: USER._id,
+                name: USER.name,
+                nick: USER.nick,
+                email: USER.email,
+                avatar: USER.avatar,
+                created_at: USER.created_at
+            }
+        });
+
+    } catch (error) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Error al realizar consulta a la base de datos',
+            error
+        });
+    };
+    
+
+    //Devolver resultados
+
+};
+
 //Logout
 const logout = (req, res) => {
 
 };
 
-module.exports = {allUsers, userById, createUser, editUser, deleteUser, login, logout};
+module.exports = {allUsers, userById, createUser, editUser, deleteUser, login, profile, logout};
 

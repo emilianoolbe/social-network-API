@@ -4,11 +4,12 @@ const router = express.Router();
 const user = require('../controllers/user');
 const upload = require('../Middlewares/userMulter');
 const validations = require('../Middlewares/userValidation');
+const auth = require('../middlewares/auth');
 
 // --> Rutas <--
 
 //Todos los usuarios
-router.get('/all', upload.single('avatar') ,user.allUsers);
+router.get('/all', auth, user.allUsers);
 
 //Usuario por ID
 //router.get('/user/:id', user.userById);
@@ -24,6 +25,9 @@ router.post('/create', validations, user.createUser);
 
 //Login
 router.post('/login', user.login);
+
+//Perfil
+router.get('/profile/:id', user.profile);
 
 //Logout
 //router.get('/logout', user.logout);
