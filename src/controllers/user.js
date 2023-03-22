@@ -1,16 +1,17 @@
-// --> Modelo + validaciones + bcrypt + JWT + mongoose-pagination <--
+// --> Modelo + validaciones + bcrypt + jwtMethod + mongoose-pagination + JWT<--
 const User = require('../database/models/User');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
-const jwt = require('../services/jwt');
+const jwtMethod = require('../services/jwt');
 const mongoosePagination = require('mongoose-pagination');
+const jwt = require('jwt-simple');
 
 // --> Métodos <--
 
 //Todos los usuarios - dividos por pág.
 const allUsers = async (req, res) => {
   
-    //Primero verifico que página se ingresó
+    //Primero verifico que página se ingresó - de lo contrario hardcodeo a 1
     let page = 1;
 
     if (req.params.page) {
@@ -44,8 +45,22 @@ const allUsers = async (req, res) => {
 };
 
 //Usuario por ID
-const userById = (req, res) => {
+const userById = async(req, res) => {
+    try {
+        const USER = await User.findById(req.params.id);
+        return res.status(200).json({
+            status: 'Success',
+            message: 'Usuario encontrado',
+            USER
+        });
 
+    } catch (error) {
+        res.status(404).json({
+            status: 'Error',
+            message: 'Usuario no encontrado',
+            error: error
+        });
+    };
 };
 
 //Crear usuario
@@ -78,7 +93,6 @@ const createUser = async (req, res) => {
         const USERTOSAVE = new User(req.body)
     
         //Guardar usuario en DB - retorno de resultados
-        let userStored = await USERTOSAVE.save();
         USERTOSAVE.save()
             .then((userStored) => {
                 return res.status(200).json({
@@ -100,16 +114,80 @@ const createUser = async (req, res) => {
             status: 'Se han encontrado errores en la validación de los datos ingresados',
             message: errors.mapped()
         });
-
-    };
-    
-
-    
+    };    
 };
 
 //Editar usuario
-const editUser = (req, res) => {
+const editUser = async (req, res) => {
 
+    //validación de datos
+    let errors = validationResult(req);
+
+    if (errors.isEmpty()) {
+
+        //Capturo al usuario a actualizar
+        let userIdentity = req.user;
+        let userToUpdate = req.body
+
+        //Compruebo que los datos que son ingresados por el usuario no existan ya en la DB
+        try {
+            let userSearch = await User.find({
+                '$or': [{email: userToUpdate.email}, {nick: userToUpdate.nick}]
+            });
+            
+            //Flag
+            let userAllreadyExist = false;
+
+            userSearch.forEach((user) => {
+
+                if (user._id != userIdentity.id) {
+                    userAllreadyExist = true;
+                };
+            });
+
+            if (userAllreadyExist) {
+                
+                return res.status(200).json({
+                    status: 'Success',
+                    message: 'Este email o nick ya estan registrados'
+                });
+            };
+            
+            // --> No hay datos duplicados <--
+
+            //Cifrado de datos sensibles
+            let pwd = await bcrypt.hash(userToUpdate.password, 10);
+            userToUpdate.password = pwd;
+
+            //Guardado en DB
+            try {
+                const USERSOTED = await User.findByIdAndUpdate(userIdentity.id, userToUpdate, {new : true});
+                return res.status(200).json({
+                    status: 'Success',
+                    message: '¡Edición exitosa!',
+                    user: USERSOTED
+                });
+
+            } catch (error) {
+                return res.status(404).json({
+                    status: 'Erorr',
+                    message:'Error al editar usuario en DB',
+                });
+            };
+            
+        } catch (error) {
+            return res.status(400).json({
+                status: 'Error',
+                message: 'Error al editar usuario',
+            });
+        };
+        
+    }else{
+        return res.status(400).json({
+            status: 'Error',
+            message: errors.mapped()
+        });
+    };
 };
 
 //Eliminar usuario
@@ -143,7 +221,7 @@ const login = async (req, res) => {
         };
 
         //Conseguir Token
-        const TOKEN = jwt.createToken(USERTOLOGIN);
+        const TOKEN = jwtMethod.createToken(USERTOLOGIN);
     
         //Devolver resultados
         return res.status(200).json({
@@ -170,7 +248,7 @@ const profile = async (req, res) => {
 
     //Consultar a la DB datos de usuarios por ID
     try {
-        const USER = await User.findById(req.params.id)
+        const USER = await User.findById(req.params.id);
         return res.status(200).json({
             status: 'Success',
             message: 'Usuario logueado',
@@ -183,18 +261,12 @@ const profile = async (req, res) => {
                 created_at: USER.created_at
             }
         });
-
     } catch (error) {
         return res.status(404).json({
             status: 'Error',
             message: 'Error al realizar consulta a la base de datos',
-            error
         });
     };
-    
-
-    //Devolver resultados
-
 };
 
 //Logout

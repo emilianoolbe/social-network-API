@@ -12,16 +12,16 @@ const auth = require('../middlewares/auth');
 router.get('/all/:page?', auth, user.allUsers);
 
 //Usuario por ID
-//router.get('/user/:id', user.userById);
+router.get('/user/:id', user.userById);
 
 //Crear usuario
 router.post('/create', validations, user.createUser);
 
 //Editar usuario
-//router.put('/user/:id', user.editUser);
+router.put('/edit', auth, validations, user.editUser);
 
 //Eliminar usuario
-//router.delete('/user/:id', user.deleteUser);
+//router.delete('/delete/:id', user.deleteUser);
 
 //Login
 router.post('/login', user.login);
