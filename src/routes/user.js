@@ -23,6 +23,12 @@ router.put('/edit', auth, validations, user.editUser);
 //Eliminar usuario
 //router.delete('/delete/:id', user.deleteUser);
 
+//Subida de avatar
+router.post('/upload', auth, upload.single('avatar'), user.upload);
+
+//Avatar
+router.get('/avatar/:file', auth, user.avatars);
+
 //Login
 router.post('/login', user.login);
 

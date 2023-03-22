@@ -4,7 +4,9 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcrypt');
 const jwtMethod = require('../services/jwt');
 const mongoosePagination = require('mongoose-pagination');
-const jwt = require('jwt-simple');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
 
 // --> Métodos <--
 
@@ -195,6 +197,41 @@ const deleteUser = (req, res) => {
 
 };
 
+//Subida de Avatar
+const upload = async (req, res) => {
+
+    if (!req.file) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Debe cargar una imagen, extensiones permitidas: png, jpg, jpeg, gif'
+        });
+    };
+
+    //Creo el nombre a la img
+    const FILENAME = `user-avatar${Date.now()}${path.extname(req.file.originalname)}`;
+
+    //Con sharp recupero imagen, redimensiono y guardo
+    let file = await sharp(req.file.buffer).resize(400, 400).toFile(`${path.join(__dirname, '../uploads/avatars/')}${FILENAME}`);
+
+    //Guardo img en DB
+
+    try {
+        const USERUPDATED = await User.findOneAndUpdate(req.user.id, {avatar: FILENAME}, {new: true});
+
+        return res.status(200).json({
+            status: 'Success',
+            message: 'Avatar actualizado correctamente',
+            user: USERUPDATED
+        })
+
+    } catch (error) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Error al intentar actualizar fichero'
+        });
+    };
+};
+
 //Login
 const login = async (req, res) => {
 
@@ -269,10 +306,32 @@ const profile = async (req, res) => {
     };
 };
 
+//Avatares
+const avatars = async (req, res) => {
+
+    //Nombre buscado 
+    const IMGNAME = req.params.file;
+
+    //Ruta absoluta img
+    const ABSOLUTEPATH = `${path.join(__dirname, '../uploads/avatars/')}${IMGNAME}`;
+   
+    //Compruebo si el archivo existe
+    
+    if(fs.existsSync(ABSOLUTEPATH)){
+        return res.sendFile(ABSOLUTEPATH);
+    };
+
+    return res.status(404).json({
+        status:'Error',
+        message: 'La imagen no existe'
+    });
+
+};
+
 //Logout
 const logout = (req, res) => {
 
 };
 
-module.exports = {allUsers, userById, createUser, editUser, deleteUser, login, profile, logout};
+module.exports = {allUsers, userById, createUser, editUser, deleteUser, upload, login, profile, avatars, logout};
 
