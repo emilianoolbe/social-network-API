@@ -32,6 +32,9 @@ const UserSchema = Schema({
     created_at:{
         type: Date,
         default: Date.now
+    },
+    deleted_at: {
+        type: Date
     }
 });
 

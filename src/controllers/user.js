@@ -26,8 +26,8 @@ const allUsers = async (req, res) => {
     //Consulta con mongoose paginate
     let userPerPage = 5
     try {
-        const USERS = await User.find().sort('_id')
-        const PAGINATION = await User.find().sort('_id').paginate(page, userPerPage)
+        const USERS = await User.find({deleted_at: {$exists: false}}).sort('_id')
+        const PAGINATION = await User.find({deleted_at: {$exists: false}}).sort('_id').paginate(page, userPerPage)
           
         return res.status(200).json({
             status: 'Success',
@@ -43,6 +43,31 @@ const allUsers = async (req, res) => {
             status: 'Error',
             message: 'Usuarios no disponibles'
         });
+    };
+};
+
+//Todos los usuarios con soft Delete
+const allDelete = async (req, res) => {
+    
+    try {
+        
+        const USERS = await User.find({deleted_at: {$exists: true}});
+        if (USERS.length <= 0) {
+            return res.status(200).json({
+                status: 'Success',
+                message: 'No se han encontrado usuarios eliminados'
+            });
+        };
+        return res.status(200).json({
+            status: 'Success',
+            users: USERS
+        });
+        
+    } catch (error) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Error al consultar a la base de datos'
+        })
     };
 };
 
@@ -163,11 +188,11 @@ const editUser = async (req, res) => {
 
             //Guardado en DB
             try {
-                const USERSOTED = await User.findByIdAndUpdate(userIdentity.id, userToUpdate, {new : true});
+                const USERSTORED = await User.findByIdAndUpdate({_id: userIdentity.id}, userToUpdate, {new : true});
                 return res.status(200).json({
                     status: 'Success',
                     message: '¡Edición exitosa!',
-                    user: USERSOTED
+                    user: USERSTORED
                 });
 
             } catch (error) {
@@ -192,9 +217,115 @@ const editUser = async (req, res) => {
     };
 };
 
-//Eliminar usuario
-const deleteUser = (req, res) => {
+//Soft Delete usuario
+const userSoftDelete = async (req, res) => {
+    
+    try {
+        const USERTODELETE = await User.updateOne({_id: req.user.id}, {$set: {deleted_at: new Date()}});
+        return res.status(200).json({
+            status: 'Success',
+            message: 'Usuario eliminado correctamente',
+            user: USERTODELETE
+        });
 
+    } catch (error) {
+        return res.status(404).json({
+            status: 'Error',
+            message: 'Error al eliminar usuario'
+        });
+    } ;
+};
+
+//Recuperar usuario
+const userRecover = async (req, res) => {
+
+    let errors = validationResult(req);
+    if (errors.isEmpty()) {
+
+        try {
+            //Buscar en base de datos si existe 
+            const USER = await User.findOne({email: req.body.email});
+    
+            // Si existe : Corroborar credenciales
+            if (USER && bcrypt.compareSync(req.body.password, USER.password)) {
+                
+                //Actualizar deleted_At
+                const RECOVER = await User.updateOne({_id: USER._id}, {$unset: {deleted_at: 1}});
+                return res.status(200).json({
+                    status: 'Success',
+                    message: 'Usuario recuperado correctamente',
+                    user: USER,
+                    recover: RECOVER
+                });
+            };
+            
+        } catch (error) {
+            return res.status(404).json({
+                status: 'Error',
+                message: 'Error al hacer petición de recuperación'
+            })
+        }
+
+    }else{
+
+        return res.status(400).json({
+            status: 'Error',
+            message: errors.mapped()
+        });
+    }
+    
+};
+
+//Hard Delete Usuario
+const hardDeleteUser = async (req, res) => {
+    let errors = validationResult(req);
+
+    if (errors.isEmpty()) {
+        
+        //Recupero usuario de Token
+        let userIdentity = req.user
+        try {
+
+            const USERTODELETE = await User.findById(userIdentity.id);
+
+            //Valido email y credenciales ingresados
+            if (req.body.email === USERTODELETE.email && bcrypt.compareSync(req.body.password, USERTODELETE.password)) {
+                
+                //Elimino avatar
+                let imgToDelete = path.join(__dirname, `../uploads/avatars/${USERTODELETE.avatar}`);
+        
+                fs.existsSync(imgToDelete) ? fs.unlinkSync(imgToDelete) : '';
+
+                //Elimino usuario
+                const USERDELETED = await User.findByIdAndDelete(userIdentity.id);
+                return res.status(200).json({
+                    status: 'Success',
+                    message: 'Usuario eliminado',
+                    user: USERDELETED
+                });
+
+            }else{
+
+                return res.status(200).json({
+                    status:'Error',
+                    message: 'Credenciales inválidas'
+                });
+            };
+
+        } catch (error) {
+
+            return res.status(200).json({
+                status:'Error',
+                message: 'Error al eliminar usuario'
+            });
+        };
+        
+    }else{
+        return res.status(400).json({
+            status: 'Error',
+            message: errors.mapped()
+        });
+    };
 };
 
 //Subida de Avatar
@@ -207,16 +338,21 @@ const upload = async (req, res) => {
         });
     };
 
-    //Creo el nombre a la img
-    const FILENAME = `user-avatar${Date.now()}${path.extname(req.file.originalname)}`;
-
-    //Con sharp recupero imagen, redimensiono y guardo
-    let file = await sharp(req.file.buffer).resize(400, 400).toFile(`${path.join(__dirname, '../uploads/avatars/')}${FILENAME}`);
-
-    //Guardo img en DB
-
     try {
-        const USERUPDATED = await User.findOneAndUpdate(req.user.id, {avatar: FILENAME}, {new: true});
+         //Elimino si existe imagen anterior
+        let user = await User.findById(req.user.id);
+        let imgToDelete = path.join(__dirname, `../uploads/avatars/${user.avatar}`);
+        
+        fs.existsSync(imgToDelete) ? fs.unlinkSync(imgToDelete) : '';
+
+        //Creo el nombre a la img nueva
+        const FILENAME = `user-avatar${Date.now()}${path.extname(req.file.originalname)}`;
+
+        //Con sharp recupero imagen, redimensiono y guardo
+        await sharp(req.file.buffer).resize(400, 400).toFile(`${path.join(__dirname, '../uploads/avatars/')}${FILENAME}`);
+        
+        //Guardo img en DB
+        const USERUPDATED = await User.findOneAndUpdate({_id: req.user.id}, {avatar: FILENAME}, {new: true});
 
         return res.status(200).json({
             status: 'Success',
@@ -241,13 +377,14 @@ const login = async (req, res) => {
     if (errors.isEmpty()) {
         
         //Valido si existe el usuario
-        const USERTOLOGIN = await User.findOne({email: req.body.email})
-        if (!USERTOLOGIN) {
+        const USERTOLOGIN = await User.findOne({email: req.body.email, deleted_at: { $exists: false }})
+        if (!USERTOLOGIN ) {
             return res.status(400).json({
                 status: 'Error',
                 message: 'El email que ha ingresado no existe, debe registrarse primero para poder loguearse'
             });
         };
+
         //Valido contraseña de usuario
         let pwd = bcrypt.compareSync(req.body.password, USERTOLOGIN.password)
         if (!pwd){
@@ -333,5 +470,5 @@ const logout = (req, res) => {
 
 };
 
-module.exports = {allUsers, userById, createUser, editUser, deleteUser, upload, login, profile, avatars, logout};
+module.exports = {allUsers, allDelete, userById, createUser, editUser, userSoftDelete, userRecover, hardDeleteUser, upload, login, profile, avatars, logout};
 

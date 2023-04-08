@@ -2,18 +2,22 @@
 const express = require('express');
 const router = express.Router();
 const follow = require('../controllers/follow');
+const auth = require('../middlewares/auth');
 
 // --> Rutas <--
 
-// Todos los follows
-router.get('/all', follow.followAlls)
-// Follow por ID
+//Nuevo seguidor
+router.post('/save', auth, follow.followTo);
 
-// --> CRUD <--
+//Eliminar seguidor
+router.delete('/unfollow', auth, follow.unFollow);
 
-//Nuevo follow
+//A quien sigo?
+router.get('/myfollows', auth, follow.myFollows);
 
-//Eliminar follow
+//Quién me sigue?
+router.get('/myfollowers', auth, follow.myFollowers);
+
 
 module.exports = router;
 

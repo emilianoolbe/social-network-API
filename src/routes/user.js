@@ -4,12 +4,16 @@ const router = express.Router();
 const user = require('../controllers/user');
 const upload = require('../Middlewares/userMulter');
 const validations = require('../Middlewares/userValidation');
+const loginValidations = require('../middlewares/loginValidations');
 const auth = require('../middlewares/auth');
 
 // --> Rutas <--
 
 //Todos los usuarios
 router.get('/all/:page?', auth, user.allUsers);
+
+//Todos los usuarios con soft delete
+router.get('/deleted', user.allDelete);
 
 //Usuario por ID
 router.get('/user/:id', user.userById);
@@ -20,8 +24,14 @@ router.post('/create', validations, user.createUser);
 //Editar usuario
 router.put('/edit', auth, validations, user.editUser);
 
-//Eliminar usuario
-//router.delete('/delete/:id', user.deleteUser);
+//Soft Delete usuario
+router.delete('/delete', auth, user.userSoftDelete);
+
+//Recuperar Usuario
+router.post('/recover', loginValidations, user.userRecover);
+
+//Hard Delete usuario
+router.delete('/hardDelete', auth, loginValidations, user.hardDeleteUser);
 
 //Subida de avatar
 router.post('/upload', auth, upload.single('avatar'), user.upload);
