@@ -3,12 +3,12 @@ const {Schema, model} = require('mongoose');
 //Defino el Schema de la colección.
 const FollowSchema = Schema({
     user: {
-        type: String,
-        required: true
+        type: Schema.ObjectId,
+        ref: 'User'
     },
     followed: {
-        type: String,
-        required: true
+        type: Schema.ObjectId,
+        ref: 'User'
     },
     created_at: {
         type: Date,

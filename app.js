@@ -6,7 +6,7 @@ const user = require('./src/routes/user');
 const publication = require('./src/routes/publication');
 const follow = require('./src/routes/follow');
 
-// --> Bienvenida <--
+// --> Bienvenida + conexión a DB<--
 connection();
 console.log('API NODE arrancada');
 

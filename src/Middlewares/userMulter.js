@@ -8,7 +8,7 @@ const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
     
     //Seteo type del file
-    let type = file.mimetype.starsWith('image/');
+    let type = file.mimetype.startsWith('image/');
 
     //Extensiones aceptadas
     let aceptedExtensions = ['.png', '.jpg', '.jpeg','.gif'];
@@ -17,9 +17,10 @@ const fileFilter = (req, file, cb) => {
     let fileExtension = path.extname(file.originalname);
 
     //Valido
-    return type && aceptedExtensions.includes(fileExtension) ? cb(null, true) : cb(null,false);
+    return file && type && aceptedExtensions.includes(fileExtension) ? cb(null, true) : cb(null,false);
 };
 
 const upload = multer({storage, fileFilter});
 
 module.exports = upload;
+
